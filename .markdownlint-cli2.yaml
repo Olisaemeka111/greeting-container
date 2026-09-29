@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: Copyright (c) Crown Copyright 2026 (Department for Work and Pensions)
+# SPDX-License-Identifier: MIT
+
+fix: true
+
+noInlineConfig: true
+
+outputFormatters:
+  - - markdownlint-cli2-formatter-default
+  - - markdownlint-cli2-formatter-codequality
+
+config:
+  default: true
+
+  # MD007 - admonitions and nested lists use 4 space indents
+  ul-indent:
+    indent: 4
+
+  # MD013 - some markdown renderers treat hard line breaks as semantic, not just visual
+  line-length: false
+
+  # MD024 - headings can be reused between sections
+  no-duplicate-heading:
+    siblings_only: true
+
+  # MD025 - front matter usage depends on the parser
+  single-title:
+    front_matter_title: ""
+
+  # MD030 - admonitions and nested lists use 4 space indents
+  list-marker-space:
+    ol_multi: 2
+    ol_single: 2
+    ul_multi: 3
+    ul_single: 3
+
+  # MD033
+  no-inline-html:
+    allowed_elements:
+      # used to define grid layouts
+      - div
+
+  # MD046 - admonitions are indented, not fenced
+  code-block-style: false
+
+  # MD048 - ensure consistent use
+  code-fence-style:
+    style: backtick
+
+  # MD053 - links in admonitions aren't consistently tracked
+  link-image-reference-definitions: false
+
+  # MD060 - ensure consistent layout
+  table-column-style:
+    style: aligned
