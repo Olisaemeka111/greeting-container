@@ -4,4 +4,3 @@
 *
 !app/app.py
 !app/requirements.txt
-!gunicorn.conf.py

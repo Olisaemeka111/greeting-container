@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Slim base pinned by tag *and* digest so every build starts from identical bytes.
-# Dependabot (.github/dependabot.yml) raises a PR when a patched digest is published.
+# Bump the tag and digest together to pick up security patches.
 FROM python:3.12.15-slim-trixie@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -37,9 +37,17 @@ WORKDIR /app
 
 COPY --from=build /opt/venv /opt/venv
 # Files stay owned by root: the app user can read the code but not change it.
-COPY app/app.py gunicorn.conf.py ./
+COPY app/app.py ./
 
-ENV PORT=8080
+# gunicorn reads all three natively, so each can be overridden at run time:
+#   PORT              -> binds 0.0.0.0:$PORT, the same port the app reports in /info
+#   WEB_CONCURRENCY   -> number of worker processes
+#   GUNICORN_CMD_ARGS -> heartbeat files on tmpfs (works with a read-only root
+#                        filesystem), request logs to stdout, and a graceful timeout
+#                        inside Kubernetes' default 30s termination grace period
+ENV PORT=8080 \
+    WEB_CONCURRENCY=2 \
+    GUNICORN_CMD_ARGS="--worker-tmp-dir /dev/shm --access-logfile - --graceful-timeout 25"
 EXPOSE 8080
 
 USER 10001:10001
@@ -49,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['PORT'] + '/healthz', timeout=2)"]
 
 # Exec form: gunicorn is PID 1 and receives SIGTERM directly for a graceful shutdown.
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
+CMD ["gunicorn", "app:app"]

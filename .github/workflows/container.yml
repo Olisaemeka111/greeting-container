@@ -2,7 +2,7 @@
 # Pushing a version tag (e.g. `git tag v1 && git push origin v1`) also publishes
 # a multi-arch image to ghcr.io/<owner>/sample-app:<tag>.
 #
-# Third-party actions are pinned to full commit SHAs; Dependabot keeps them current.
+# Third-party actions are pinned to full commit SHAs.
 name: container
 
 on:
@@ -61,8 +61,32 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Run the image the way Kubernetes would (non-root, read-only root filesystem,
+      # no capabilities), check every endpoint and that PORT and GREETING are
+      # honoured, then check that SIGTERM gives a clean exit.
       - name: Smoke test
-        run: tests/smoke-test.sh "$TEST_IMAGE"
+        run: |
+          fail() { echo "FAIL: $*" >&2; docker logs smoke >&2 || true; exit 1; }
+          health() { docker inspect -f '{{.State.Health.Status}}' smoke; }
+
+          docker run -d --name smoke \
+            --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --health-interval 2s \
+            -e GREETING="hello from CI" -e PORT=9090 \
+            -p 127.0.0.1:18080:9090 "$TEST_IMAGE"
+
+          for _ in $(seq 1 30); do [ "$(health)" = healthy ] && break; sleep 1; done
+          [ "$(health)" = healthy ] || fail "container never became healthy"
+
+          url=http://127.0.0.1:18080
+          [ "$(curl -fsS "$url/healthz" | jq -r .status)" = ok ] || fail "/healthz did not return ok"
+          [ "$(curl -fsS "$url/" | jq -r .message)" = "hello from CI" ] || fail "/ ignored GREETING"
+          [ "$(curl -fsS "$url/info" | jq -r .port)" = 9090 ] || fail "/info ignored PORT"
+          [ "$(docker exec smoke id -u)" != 0 ] || fail "container is running as root"
+
+          docker stop -t 10 smoke
+          [ "$(docker inspect -f '{{.State.ExitCode}}' smoke)" = 0 ] || fail "unclean exit on SIGTERM"
+          echo "PASS"
 
       - name: Scan for vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
