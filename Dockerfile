@@ -46,7 +46,7 @@ USER 10001:10001
 
 # Used by `docker run`; Kubernetes ignores this and uses its own probes on /healthz.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['PORT'] + '/healthz', timeout=2)" || exit 1
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['PORT'] + '/healthz', timeout=2)"]
 
 # Exec form: gunicorn is PID 1 and receives SIGTERM directly for a graceful shutdown.
 CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
