@@ -1,0 +1,7 @@
+# Allowlist: only the files the image needs are sent to the build context.
+# Keeps .git, local env files and editor clutter out of the image and stops
+# unrelated changes from invalidating the layer cache.
+*
+!app/app.py
+!app/requirements.txt
+!gunicorn.conf.py

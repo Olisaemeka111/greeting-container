@@ -1,0 +1,18 @@
+# Keeps the pinned base-image digest and action SHAs patched.
+# Python packages are left out on purpose: app/requirements.txt belongs to the
+# app team and is not to be modified as part of this task.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Stay on Python 3.12; moving to 3.13+ should be a deliberate change.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
